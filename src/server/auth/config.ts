@@ -1,6 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
+import Nodemailer from "next-auth/providers/nodemailer";
 
 import { db } from "~/server/db";
 
@@ -32,17 +32,26 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    DiscordProvider,
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
+    Nodemailer({
+      server: {
+        host: process.env.EMAIL_SERVER_HOST ?? "https://localhost:3000",
+        port: Number(process.env.EMAIL_SERVER_PORT),
+        auth: {
+          user: process.env.EMAIL_SERVER_USER,
+          pass: process.env.EMAIL_SERVER_PASSWORD ?? "",
+        },
+      },
+      from: process.env.EMAIL_FROM ?? "teste@teste.com",
+      ...(process.env.NODE_ENV !== "production"
+        ? {
+            sendVerificationRequest({ url }) {
+              console.log("Login link", url);
+            },
+          }
+        : {}),
+    }),
   ],
+
   adapter: PrismaAdapter(db),
   callbacks: {
     session: ({ session, user }) => ({
